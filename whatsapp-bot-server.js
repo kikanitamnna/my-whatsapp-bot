@@ -78,15 +78,23 @@ app.post('/webhook', async (req, res) => {
                 replyText = "I'd be happy to help you book a FREE 30-minute consultation on Google Meet! \n\n1. Please enter your *Full Name*:";
                 await sendWhatsAppMessage(from, replyText);
             }
-            else if (lowerMsg.includes("offer") || lowerMsg.includes("launch")) {
-                // This will send your professional template with the button!
-                await sendTemplateMessage(from, "launch_offer_neuro");
+            else if (lowerMsg.includes("offer") || lowerMsg.includes("launch") || lowerMsg.includes("promo") || lowerMsg.includes("discount")) {
+                console.log(`[Offer Keyword Detected] for ${from}`);
+                // Try sending the beautiful template first
+                const success = await sendTemplateMessage(from, "launch_offer_neuro");
+
+                // If template fails (e.g. pending approval or test number limits), send text fallback
+                if (!success) {
+                    console.log(`[Fallback] Template failed, sending text offer to ${from}`);
+                    replyText = "🚀 *Launch Offer:* We are offering a FREE 30-minute AI Strategy Audit for your business! \n\nType *'Book'* to claim your spot now!";
+                    await sendWhatsAppMessage(from, replyText);
+                }
             }
-            else if (lowerMsg.includes("service") || lowerMsg.includes("what you do")) {
+            else if (lowerMsg.includes("service") || lowerMsg.includes("what you do") || lowerMsg.includes("help")) {
                 replyText = `${KNOWLEDGE_BASE}\n\n${AINEURO_SERVICES}\n\nWould you like to book a free consultation to discuss any of these?`;
                 await sendWhatsAppMessage(from, replyText);
             }
-            else if (lowerMsg.includes("hello") || lowerMsg.includes("hi")) {
+            else if (lowerMsg.includes("hello") || lowerMsg.includes("hi") || lowerMsg.includes("hey")) {
                 replyText = `Hello! I am the AI Assistant for *AI Neuro Agency*. 👋\n\nI help businesses automate their work to save time and increase efficiency.\n\nType *'Services'* to see what we offer or *'Book'* to schedule a free 30-min Google Meet consultation!`;
                 await sendWhatsAppMessage(from, replyText);
             }
@@ -202,7 +210,8 @@ async function sendWhatsAppMessage(to, text) {
  */
 async function sendTemplateMessage(to, templateName) {
     try {
-        await axios({
+        console.log(`[Attempting Template] Sending '${templateName}' to ${to}`);
+        const response = await axios({
             method: 'POST',
             url: `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`,
             headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` },
@@ -212,12 +221,17 @@ async function sendTemplateMessage(to, templateName) {
                 type: 'template',
                 template: {
                     name: templateName,
-                    language: { code: 'en_US' }
+                    language: { code: 'en_US' } // Most templates use en_US or en
                 }
             }
         });
+        console.log(`[Template success] Message ID: ${response.data.messages[0].id}`);
+        return true;
     } catch (err) {
-        console.error("Error sending template:", err.response?.data || err.message);
+        // Detailed log to show exactly what went wrong for the user
+        const errorData = err.response?.data || err.message;
+        console.error("Error sending template:", JSON.stringify(errorData, null, 2));
+        return false;
     }
 }
 
