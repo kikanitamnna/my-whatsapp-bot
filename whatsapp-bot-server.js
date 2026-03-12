@@ -76,18 +76,24 @@ app.post('/webhook', async (req, res) => {
             if (bookingKeywords.some(keyword => lowerMsg.includes(keyword))) {
                 userState[from] = { step: 1, data: {} };
                 replyText = "I'd be happy to help you book a FREE 30-minute consultation on Google Meet! \n\n1. Please enter your *Full Name*:";
+                await sendWhatsAppMessage(from, replyText);
+            }
+            else if (lowerMsg.includes("offer") || lowerMsg.includes("launch")) {
+                // This will send your professional template with the button!
+                await sendTemplateMessage(from, "launch_offer_neuro");
             }
             else if (lowerMsg.includes("service") || lowerMsg.includes("what you do")) {
                 replyText = `${KNOWLEDGE_BASE}\n\n${AINEURO_SERVICES}\n\nWould you like to book a free consultation to discuss any of these?`;
+                await sendWhatsAppMessage(from, replyText);
             }
             else if (lowerMsg.includes("hello") || lowerMsg.includes("hi")) {
                 replyText = `Hello! I am the AI Assistant for *AI Neuro Agency*. 👋\n\nI help businesses automate their work to save time and increase efficiency.\n\nType *'Services'* to see what we offer or *'Book'* to schedule a free 30-min Google Meet consultation!`;
+                await sendWhatsAppMessage(from, replyText);
             }
             else {
                 replyText = "Thank you for reaching out! I'm the AINeuro AI Assistant. I can explain our *Services* or help you *Book* a free consultation meeting. What would you like to do?";
+                await sendWhatsAppMessage(from, replyText);
             }
-
-            await sendWhatsAppMessage(from, replyText);
         }
         res.sendStatus(200);
     }
@@ -171,7 +177,7 @@ app.post('/incoming-booking', async (req, res) => {
 });
 
 /**
- * Helper: Send WhatsApp Message
+ * Helper: Send WhatsApp Message (Text)
  */
 async function sendWhatsAppMessage(to, text) {
     try {
@@ -187,9 +193,34 @@ async function sendWhatsAppMessage(to, text) {
             }
         });
     } catch (err) {
-        console.error("Error:", err.response?.data || err.message);
+        console.error("Error sending text:", err.response?.data || err.message);
+    }
+}
+
+/**
+ * Helper: Send WhatsApp Template Message (Professional Buttons/Layout)
+ */
+async function sendTemplateMessage(to, templateName) {
+    try {
+        await axios({
+            method: 'POST',
+            url: `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`,
+            headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` },
+            data: {
+                messaging_product: 'whatsapp',
+                to: to,
+                type: 'template',
+                template: {
+                    name: templateName,
+                    language: { code: 'en_US' }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Error sending template:", err.response?.data || err.message);
     }
 }
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ AINeuro Pro Bot is Active on port ${PORT}`));
+
